@@ -29,11 +29,7 @@ cd etl5
 ```bash
 docker-compose up -d
 ```
-4. Создать топик
-```bash
-docker exec -it etl5-kafka-1 kafka-topics --create --topic test-topic --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-```
-5. Создать таблицу в clickhouse
+4. Создать таблицу в clickhouse
 ```bash
 docker exec -it etl5-clickhouse-1 clickhouse-client
 
@@ -50,15 +46,15 @@ CREATE TABLE test.messages (
 ) ENGINE = MergeTree()
 ORDER BY (user_id, timestamp);
 ````
-6. Скачать зависимости spark
+5. Скачать зависимости spark
 ```bash
 docker exec -it etl5-spark-master-1 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r /app/requirements.txt
 ```
-7. Запустить топик
+6. Запустить топик
 ```bash
 docker exec -it etl5-kafka-1 kafka-topics --create --topic pgserver.public.messages --partitions 1 --replication-factor 1 --bootstrap-server localhost:9092
 ```
-8. Создать таблицу в postgres
+7. Создать таблицу в postgres
 ```bash
 docker exec -it etl5-postgres-1 psql -U user -d mydb
 
@@ -72,11 +68,11 @@ CREATE TABLE messages (
     timestamp TIMESTAMP DEFAULT NOW()
 );
 ```
-9. Запускаем spark
+8. Запускаем spark
 ```bash
 docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/main.py
 ```
-10. Запускаем Debezium
+9. Запускаем Debezium
 ```bash
 curl -X POST -H "Content-Type: application/json" --data "@connector-config.json" http://localhost:8083/connectors
 ```

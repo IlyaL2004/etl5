@@ -1,7 +1,14 @@
 CREATE DATABASE IF NOT EXISTS test;
+
 CREATE TABLE IF NOT EXISTS test.messages
 (
-    message String,
+    user_id Int32,
+    track_id String,
+    genre String,
+    artist String,
     timestamp DateTime
-) ENGINE = MergeTree()
-ORDER BY timestamp;
+)
+ENGINE = MergeTree()
+ORDER BY (user_id, timestamp);
+
+GRANT ALL PRIVILEGES ON test.* TO admin;
