@@ -85,11 +85,16 @@ SELECT * FROM test.messages
 Ожидаемый вывод:
 ```
 ┌─user_id─┬─track_id──┬─genre──────┬─artist──┬───────────timestamp─┐
-│       1 │ track_001 │ pop        │ ArtistA │ 2025-05-24 13:24:18 │
-│       1 │ track_001 │ electronic │ ArtistB │ 2025-05-24 13:24:18 │
-│       2 │ track_002 │ rock       │ BandX   │ 2025-05-24 13:24:18 │
-│       2 │ track_002 │ metal      │ BandY   │ 2025-05-24 13:24:18 │
+│       1 │ track_001 │ pop        │ ArtistA │ 2025-05-24 17:17:45 │
+│       1 │ track_001 │ pop        │ ArtistB │ 2025-05-24 17:17:45 │
+│       1 │ track_001 │ electronic │ ArtistA │ 2025-05-24 17:17:45 │
+│       1 │ track_001 │ electronic │ ArtistB │ 2025-05-24 17:17:45 │
+│       2 │ track_002 │ rock       │ BandX   │ 2025-05-24 17:17:45 │
+│       2 │ track_002 │ rock       │ BandY   │ 2025-05-24 17:17:45 │
+│       2 │ track_002 │ metal      │ BandX   │ 2025-05-24 17:17:45 │
+│       2 │ track_002 │ metal      │ BandY   │ 2025-05-24 17:17:45 │
 └─────────┴───────────┴────────────┴─────────┴─────────────────────┘
+
 
 ```
 
