@@ -67,6 +67,11 @@ services:
       - "8083:8083"
     networks:
       - etl-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   clickhouse:
     image: clickhouse/clickhouse-server:23.3
@@ -145,6 +150,24 @@ services:
       --partitions 1
       --replication-factor 1
       --bootstrap-server kafka:9092"
+    networks:
+      - etl-network
+  connect-setup:
+    image: curlimages/curl:8.5.0
+    depends_on:
+      connect:
+        condition: service_healthy
+    volumes:
+      - ./connector-config.json:/connector-config.json
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until curl -s http://connect:8083/; do
+          echo "Waiting for Kafka Connect..."
+          sleep 2
+        done
+        curl -X POST -H "Content-Type: application/json" --data @/connector-config.json http://connect:8083/connectors
     networks:
       - etl-network
 

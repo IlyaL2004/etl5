@@ -29,31 +29,9 @@ cd etl5
 ```bash
 docker-compose up -d
 ```
-4. Создать таблицу в clickhouse
-```bash
-docker exec -it etl5-clickhouse-1 clickhouse-client
-
-DROP TABLE IF EXISTS test.messages;
-
-CREATE DATABASE IF NOT EXISTS test;
-
-CREATE TABLE test.messages (
-    user_id Int32,
-    track_id String,
-    genre String,
-    artist String,
-    timestamp DateTime
-) ENGINE = MergeTree()
-ORDER BY (user_id, timestamp);
-````
-
-5. Запускаем spark
+4. Запускаем spark
 ```bash
 docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/main.py
-```
-6. Запускаем Debezium
-```bash
-curl -X POST -H "Content-Type: application/json" --data "@connector-config.json" http://localhost:8083/connectors
 ```
 
 ## Проверка работы
