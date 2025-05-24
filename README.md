@@ -47,16 +47,11 @@ CREATE TABLE test.messages (
 ORDER BY (user_id, timestamp);
 ````
 
-5. Запустить топик
-```bash
-docker exec -it etl5-kafka-1 kafka-topics --create --topic pgserver.public.messages --partitions 1 --replication-factor 1 --bootstrap-server localhost:9092
-```
-
-6. Запускаем spark
+5. Запускаем spark
 ```bash
 docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/main.py
 ```
-7. Запускаем Debezium
+6. Запускаем Debezium
 ```bash
 curl -X POST -H "Content-Type: application/json" --data "@connector-config.json" http://localhost:8083/connectors
 ```

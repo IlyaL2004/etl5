@@ -25,6 +25,11 @@ services:
       - "9092:9092"
     networks:
       - etl-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
   postgres:
     image: debezium/postgres:14
@@ -104,6 +109,20 @@ services:
       - SPARK_LOCAL_IP=spark-worker
     networks:
       - etl-network
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -c "kafka-topics --create --if-not-exists
+      --topic pgserver.public.messages
+      --partitions 1
+      --replication-factor 1
+      --bootstrap-server kafka:9092"
+    networks:
+      - etl-network
+
 
 volumes:
   postgres-data:
