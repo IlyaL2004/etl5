@@ -34,6 +34,7 @@ docker-compose up -d
 docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/main.py
 ```
 
+
 ## Проверка работы
 
 1. Вставить тестовые данные в PostgreSQL:
