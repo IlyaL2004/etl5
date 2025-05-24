@@ -39,12 +39,16 @@ docker exec -it etl5-clickhouse-1 clickhouse-client
 
 CREATE DATABASE IF NOT EXISTS test;
 
-CREATE TABLE IF NOT EXISTS test.messages
-                (
-                    message String,
-                    timestamp DateTime
-                ) ENGINE = MergeTree()
-                ORDER BY timestamp
+DROP TABLE IF EXISTS test.messages;
+
+CREATE TABLE test.messages (
+    user_id Int32,
+    track_id String,
+    genre String,
+    artist String,
+    timestamp DateTime
+) ENGINE = MergeTree()
+ORDER BY (user_id, timestamp);
 ````
 6. Скачать зависимости spark
 ```bash
@@ -58,10 +62,14 @@ docker exec -it etl5-kafka-1 kafka-topics --create --topic pgserver.public.messa
 ```bash
 docker exec -it etl5-postgres-1 psql -U user -d mydb
 
+DROP TABLE IF EXISTS messages;
+
 CREATE TABLE messages (
-    id SERIAL PRIMARY KEY,
-    message TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    user_id INT PRIMARY KEY,
+    track_id VARCHAR(255),
+    genre TEXT[],
+    artists TEXT[],
+    timestamp TIMESTAMP DEFAULT NOW()
 );
 ```
 9. Запускаем spark
@@ -70,7 +78,7 @@ docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spa
 ```
 10. Запускаем Debezium
 ```bash
-11.curl -X POST -H "Content-Type: application/json" --data "@connector-config.json" http://localhost:8083/connectors
+curl -X POST -H "Content-Type: application/json" --data "@connector-config.json" http://localhost:8083/connectors
 ```
 
 ## Проверка работы
@@ -78,8 +86,10 @@ docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spa
 1. Вставить тестовые данные в PostgreSQL:
 
 ```bash
-INSERT INTO messages(id, message, created_at) 
-VALUES (13, 'test message', NOW());
+INSERT INTO messages (user_id, track_id, genre, artists, timestamp)
+VALUES 
+(1, 'track_001', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], NOW()),
+(2, 'track_002', ARRAY['rock', 'metal'], ARRAY['BandX', 'BandY'], NOW());
 ```
 2. Проверить данные в ClickHouse:
 
@@ -89,7 +99,13 @@ SELECT * FROM test.messages
 
 Ожидаемый вывод:
 ```
-test message    2024-05-28 14:30:45
+┌─user_id─┬─track_id──┬─genre──────┬─artist──┬───────────timestamp─┐
+│       1 │ track_001 │ pop        │ ArtistA │ 2025-05-24 13:24:18 │
+│       1 │ track_001 │ electronic │ ArtistB │ 2025-05-24 13:24:18 │
+│       2 │ track_002 │ rock       │ BandX   │ 2025-05-24 13:24:18 │
+│       2 │ track_002 │ metal      │ BandY   │ 2025-05-24 13:24:18 │
+└─────────┴───────────┴────────────┴─────────┴─────────────────────┘
+
 ```
 
 ## Архитектура

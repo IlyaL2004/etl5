@@ -1,43 +1,40 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json, expr
-from pyspark.sql.types import (
-    StructType,
-    StructField,
-    StringType,
-    IntegerType,
-    LongType,
-    TimestampType
-)
+from pyspark.sql.functions import col, from_json, expr, arrays_zip, explode
+from pyspark.sql.types import *
 from clickhouse_driver import Client
 
-# 1. Инициализация Spark Session
+# Инициализация Spark
 spark = SparkSession.builder \
-    .appName("DebeziumClickHouse") \
+    .appName("MusicDataPipeline") \
     .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0") \
     .config("spark.sql.streaming.checkpointLocation", "/tmp/checkpoints") \
     .getOrCreate()
 
-# 2. Определяем схему для Debezium Envelope внутри поля payload
+# Определение схемы для Debezium
 inner_schema = StructType([
     StructField("before", StructType([
-        StructField("id", IntegerType(), True),
-        StructField("message", StringType(), True),
-        StructField("created_at", LongType(), True)
+        StructField("user_id", IntegerType(), True),
+        StructField("track_id", StringType(), True),
+        StructField("genre", ArrayType(StringType()), True),
+        StructField("artists", ArrayType(StringType()), True),
+        StructField("timestamp", LongType(), True)
     ]), True),
     StructField("after", StructType([
-        StructField("id", IntegerType(), True),
-        StructField("message", StringType(), True),
-        StructField("created_at", LongType(), True)
+        StructField("user_id", IntegerType(), True),
+        StructField("track_id", StringType(), True),
+        StructField("genre", ArrayType(StringType()), True),
+        StructField("artists", ArrayType(StringType()), True),
+        StructField("timestamp", LongType(), True)
     ]), True),
     StructField("op", StringType(), True)
 ])
 
 root_schema = StructType([
-    StructField("schema", StringType(), True),  # ignore schema field
-    StructField("payload", inner_schema, True)
+    StructField("schema", StringType(), True),
+    StructField("payload", inner_schema)
 ])
 
-# 3. Чтение из Kafka
+# Чтение из Kafka
 raw_df = spark.readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "kafka:9092") \
@@ -45,59 +42,54 @@ raw_df = spark.readStream \
     .option("startingOffsets", "earliest") \
     .load()
 
-# 4. Парсинг JSON, приводим payload.after.created_at к Timestamp
+# Обработка данных
 parsed_df = raw_df.select(
     from_json(col("value").cast("string"), root_schema).alias("data")
 ).select(
-    col("data.payload.after.message").alias("message"),
-    expr("timestamp_micros(data.payload.after.created_at)").alias("timestamp"),
-    col("data.payload.op").alias("operation_type")
+    col("data.payload.after.user_id").alias("user_id"),
+    col("data.payload.after.track_id").alias("track_id"),
+    explode(arrays_zip("data.payload.after.genre", "data.payload.after.artists")).alias("exploded"),
+    expr("timestamp_micros(data.payload.after.timestamp)").alias("timestamp")
+).select(
+    "user_id",
+    "track_id",
+    "exploded.genre",
+    "exploded.artists",
+    "timestamp"
 ).filter(
-    col("operation_type").isin("c", "u")
-).filter(
-    col("message").isNotNull()
+    col("genre").isNotNull() & col("artists").isNotNull()
 )
 
-# 5. Функция для записи в ClickHouse с логированием
 
+# Функция записи в ClickHouse
 def write_to_clickhouse(batch_df, batch_id):
+    client = None  # Инициализация переменной
     try:
-        count = batch_df.count()
-        print(f"→ Batch {batch_id}: got {count} rows")
-        batch = batch_df.collect()
-        for row in batch:
-            print(f"   row: msg={row.message!r}, ts={row.timestamp}")
-
-        if count == 0:
+        if batch_df.rdd.isEmpty():
             return
 
-        client = Client(
-            host='clickhouse', port=9000,
-            user='default', password='', database='test'
-        )
+        client = Client('clickhouse', port=9000, database='test')
+        rows = batch_df.collect()
 
-        inserts = [{"message": r.message, "timestamp": r.timestamp} for r in batch]
+        inserts = [{
+            "user_id": row.user_id,
+            "track_id": row.track_id,
+            "genre": row.genre,
+            "artist": row.artists,
+            "timestamp": row.timestamp
+        } for row in rows]
 
-        print(f"Batch {batch_id}: will insert {len(inserts)} rows")
-        try:
-            client.execute(
-                "INSERT INTO test.messages (message, timestamp) VALUES",
-                inserts,
-                types_check=True
-            )
-            print(f"Batch {batch_id}: successfully inserted {len(inserts)} records")
-        except Exception as e:
-            print(f"Batch {batch_id}: insert failed: {e}")
+        client.execute("INSERT INTO test.messages (user_id, track_id, genre, artist, timestamp) VALUES", inserts)
+        print(f"Batch {batch_id}: Inserted {len(inserts)} rows")
 
     except Exception as e:
-        print(f"Error in batch {batch_id}: {e}")
+        print(f"Error in batch {batch_id}: {str(e)}")
     finally:
-        try:
+        if client is not None:  # Проверка перед disconnect
             client.disconnect()
-        except:
-            pass
 
-# 6. Запуск стриминга
+
+# Запуск стриминга
 query = parsed_df.writeStream \
     .foreachBatch(write_to_clickhouse) \
     .outputMode("append") \
