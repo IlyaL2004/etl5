@@ -11,4 +11,3 @@ CREATE TABLE IF NOT EXISTS test.messages
 ENGINE = MergeTree()
 ORDER BY (user_id, timestamp);
 
-GRANT ALL PRIVILEGES ON test.* TO admin;

@@ -73,8 +73,33 @@ services:
     ports:
       - "8123:8123"
       - "9000:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --host localhost --query \"SELECT 1\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - etl-network
+
+  clickhouse-init:
+    # используем тот же образ, что и сервер
+    image: clickhouse/clickhouse-server:23.3
+    depends_on:
+      clickhouse:
+        condition: service_healthy
     volumes:
-      - ./clickhouse:/docker-entrypoint-initdb.d
+      - ./clickhouse-init/init.sql:/init.sql:ro
+    entrypoint:
+      - bash
+      - -c
+      - |
+        # ждём готовности сервера
+        until clickhouse-client --host clickhouse --query "SELECT 1"; do
+          echo "Waiting for ClickHouse..."
+          sleep 2
+        done
+        # прогоняем SQL
+        clickhouse-client --host clickhouse --multiquery < /init.sql
     networks:
       - etl-network
 
