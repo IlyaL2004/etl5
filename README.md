@@ -33,9 +33,9 @@ docker-compose up -d
 ```bash
 docker exec -it etl5-clickhouse-1 clickhouse-client
 
-CREATE DATABASE IF NOT EXISTS test;
-
 DROP TABLE IF EXISTS test.messages;
+
+CREATE DATABASE IF NOT EXISTS test;
 
 CREATE TABLE test.messages (
     user_id Int32,
@@ -46,33 +46,17 @@ CREATE TABLE test.messages (
 ) ENGINE = MergeTree()
 ORDER BY (user_id, timestamp);
 ````
-5. Скачать зависимости spark
-```bash
-docker exec -it etl5-spark-master-1 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r /app/requirements.txt
-```
-6. Запустить топик
+
+5. Запустить топик
 ```bash
 docker exec -it etl5-kafka-1 kafka-topics --create --topic pgserver.public.messages --partitions 1 --replication-factor 1 --bootstrap-server localhost:9092
 ```
-7. Создать таблицу в postgres
-```bash
-docker exec -it etl5-postgres-1 psql -U user -d mydb
 
-DROP TABLE IF EXISTS messages;
-
-CREATE TABLE messages (
-    user_id INT PRIMARY KEY,
-    track_id VARCHAR(255),
-    genre TEXT[],
-    artists TEXT[],
-    timestamp TIMESTAMP DEFAULT NOW()
-);
-```
-8. Запускаем spark
+6. Запускаем spark
 ```bash
 docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/main.py
 ```
-9. Запускаем Debezium
+7. Запускаем Debezium
 ```bash
 curl -X POST -H "Content-Type: application/json" --data "@connector-config.json" http://localhost:8083/connectors
 ```
@@ -82,6 +66,9 @@ curl -X POST -H "Content-Type: application/json" --data "@connector-config.json"
 1. Вставить тестовые данные в PostgreSQL:
 
 ```bash
+docker exec -it etl5-postgres-1 psql -U user -d mydb
+
+
 INSERT INTO messages (user_id, track_id, genre, artists, timestamp)
 VALUES 
 (1, 'track_001', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], NOW()),
@@ -90,6 +77,8 @@ VALUES
 2. Проверить данные в ClickHouse:
 
 ```bash
+docker exec -it etl5-clickhouse-1 clickhouse-client
+
 SELECT * FROM test.messages
 ```
 

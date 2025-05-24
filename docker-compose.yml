@@ -1,9 +1,7 @@
 version: '3'
-
 networks:
   etl-network:
     driver: bridge
-
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
@@ -91,6 +89,7 @@ services:
       - ./spark-app:/app
     networks:
       - etl-network
+    command: bash -c "pip install -i https://pypi.tuna.tsinghua.edu.cn/simple  -r /app/requirements.txt && /opt/bitnami/scripts/spark/run.sh"
 
   spark-worker:
     image: bitnami/spark:3.5.0
