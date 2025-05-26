@@ -170,7 +170,30 @@ services:
         curl -X POST -H "Content-Type: application/json" --data @/connector-config.json http://connect:8083/connectors
     networks:
       - etl-network
+  superset:
+    image: apache/superset:latest
+    ports:
+      - "8088:8088"
+    networks:
+      - etl-network
+    depends_on:
+      - clickhouse
+    environment:
+      SUPERSET_SECRET_KEY: your-secret-key
+      SUPERSET_LOAD_EXAMPLES: "no"
+    volumes:
+      - superset-data:/app/superset_home
+    command: >
+      bash -c "
+      pip install -i https://pypi.tuna.tsinghua.edu.cn/simple clickhouse-connect==0.6.20 &&
+      superset db upgrade &&
+      superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
+      superset init &&
+      /usr/bin/run-server.sh
+      "
+
 
 
 volumes:
   postgres-data:
+  superset-data:

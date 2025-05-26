@@ -7,6 +7,7 @@
 - **Kafka** - потоковый брокер
 - **Spark Structured Streaming** - обработка данных
 - **ClickHouse** - аналитическая СУБД
+- **Superset** - платформа для визуализации данных
 
 ## Предварительные требования
 
@@ -74,5 +75,5 @@ SELECT * FROM test.messages
 
 ## Архитектура
 ```
-PostgreSQL → (Debezium) → Kafka → Spark Streaming → ClickHouse
+PostgreSQL → (Debezium) → Kafka → Spark Streaming → ClickHouse -> Superset
 ```
