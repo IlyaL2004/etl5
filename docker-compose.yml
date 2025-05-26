@@ -87,7 +87,6 @@ services:
       - etl-network
 
   clickhouse-init:
-    # используем тот же образ, что и сервер
     image: clickhouse/clickhouse-server:23.3
     depends_on:
       clickhouse:

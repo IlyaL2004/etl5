@@ -77,7 +77,7 @@ def write_to_clickhouse(batch_df, batch_id):
             "user_id": row.user_id,
             "track_id": row.track_id,
             "genre": row.genre,
-            "artist": row.artist,  # Исправлено на "artist"
+            "artist": row.artist, 
             "timestamp": row.timestamp
         } for row in rows]
         client.execute("INSERT INTO test.messages (user_id, track_id, genre, artist, timestamp) VALUES", inserts)

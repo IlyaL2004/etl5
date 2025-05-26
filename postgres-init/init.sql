@@ -12,7 +12,7 @@ CREATE DATABASE mydb;
 
 -- Создаем таблицу 'messages'
 CREATE TABLE messages (
-    user_id INT PRIMARY KEY,
+    user_id INT,
     track_id VARCHAR(255),
     genre TEXT[],
     artists TEXT[],

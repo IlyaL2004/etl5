@@ -49,6 +49,34 @@ VALUES
 (1, 'track_001', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], NOW()),
 (2, 'track_002', ARRAY['rock', 'metal'], ARRAY['BandX', 'BandY'], NOW());
 ```
+
+```bash
+INSERT INTO messages (user_id, track_id, genre, artists, timestamp)
+VALUES 
+(1, 'track_058', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2023-04-18 15:31:45'),
+(2, 'track_056', ARRAY['rock', 'metal'], ARRAY['BandX', 'BandY'], '2023-10-29 23:59:59'),
+(3, 'track_044', ARRAY['jazz', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2025-01-15 08:35:45'),
+(6, 'track_055', ARRAY['pop'], ARRAY['ArtistA', 'ArtistB'], '2023-11-15 08:30:45'),
+(5, 'track_049', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2021-06-10 16:30:45'),
+(9, 'track_096', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2022-10-11 12:30:45'),
+(11, 'track_098', ARRAY['electronic'], ARRAY['ArtistA', 'ArtistB'], '2024-01-15 08:30:45'),
+(13, 'track_099', ARRAY['pop', 'electronic'], ARRAY['ArtistC'], '2021-03-15 08:30:45'),
+(14, 'track_019', ARRAY['pop', 'jazz'], ARRAY['ArtistD', 'ArtistB'], '2025-04-15 09:30:45'),
+(15, 'track_008', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistD'], '2025-04-15 06:30:45'),
+(1, 'track_007', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2025-04-15 05:30:45'),
+(2, 'track_005', ARRAY['pop', 'electronic'], ARRAY['ArtistV', 'ArtistB'], '2025-05-15 15:30:45'),
+(3, 'track_0014', ARRAY['hip hop', 'electronic'], ARRAY['ArtistS', 'ArtistF'], '2021-06-15 19:30:45'),
+(16, 'track_0013', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2024-07-15 19:30:45'),
+(17, 'track_0011', ARRAY['pop', 'rap'], ARRAY['ArtistA', 'ArtistB'], '2024-08-15 20:30:45'),
+(8, 'track_0046', ARRAY['rap'], ARRAY['ArtistA', 'ArtistB'], '2024-09-15 21:30:45'),
+(7, 'track_0068', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2024-02-15 22:30:45'),
+(1, 'track_0026', ARRAY['rap', 'electronic'], ARRAY['ArtistA', 'ArtistC'], '2025-03-15 19:30:45'),
+(3, 'track_0030', ARRAY['electronic'], ARRAY['ArtistA', 'ArtistB'], '2023-04-15 16:30:45'),
+(4, 'track_0045', ARRAY['pop', 'electronic'], ARRAY['ArtistN', 'ArtistV'], '2024-05-15 22:30:45'),
+(1, 'track_0011', ARRAY['electronic'], ARRAY['ArtistA', 'ArtistE'], '2025-11-15 21:30:45'),
+(1, 'track_004', ARRAY['rock', 'metal'], ARRAY['BandE', 'BandY'], '2025-12-25 23:59:59');
+```
+
 2. Проверить данные в ClickHouse:
 
 ```bash
@@ -103,7 +131,7 @@ Display name: ClickHouse Test
 
 6. Создаём dashboard
 
-![Логотип проекта](./Dashboard.jpg)
+![Пример dashboard](./Dashboard.jpg)
 
 ## Архитектура
 ```
