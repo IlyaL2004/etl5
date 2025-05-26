@@ -88,7 +88,7 @@ Password: admin
 Вводим:
 
 ```
-HOST: clickhouse*
+HOST: clickhouse
 
 PORT: 8123
 
