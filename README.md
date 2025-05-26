@@ -72,6 +72,35 @@ SELECT * FROM test.messages
 
 
 ```
+3. Можно перейти по http://localhost:8088
+
+4. Логинимся
+
+Вводим:
+
+Login: admin
+
+Password: admin
+
+5. Создаём подключение
+
+Вводим:
+
+HOST: clickhouse*
+
+PORT: 8123
+
+Database name: test
+
+USERNAME: default
+
+Password: (пусто)
+
+Display name: ClickHouse Test
+
+6. Создаём dashboard
+
+![Логотип проекта](./Dashboard.jpg)
 
 ## Архитектура
 ```
