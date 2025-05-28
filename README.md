@@ -131,6 +131,8 @@ Display name: ClickHouse Test
 
 6. Создаём dashboard
 
+*В верхнем чаре можно подвигать ползунок и поменять YAU на MAU, DAU*
+
 ![Пример dashboard](./Dashboard.jpg)
 
 ## Архитектура
