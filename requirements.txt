@@ -1,0 +1,5 @@
+faststream[kafka]
+psycopg2-binary
+protobuf
+google-api-python-client
+googleapis-common-protos
