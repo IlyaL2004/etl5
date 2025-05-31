@@ -35,6 +35,15 @@ docker-compose up -d
 docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/main.py
 ```
 
+5. Загрузим зависимости
+```bash
+pip install -r requirements.txt
+```
+
+6. Запустим ex.py
+```bash
+python ex.py
+```
 
 ## Проверка работы
 
@@ -139,3 +148,6 @@ Display name: ClickHouse Test
 ```
 PostgreSQL → (Debezium) → Kafka → Spark Streaming → ClickHouse -> Superset
 ```
+
+
+
