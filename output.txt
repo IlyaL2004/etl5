@@ -1,0 +1,666 @@
+Скрипт запущен в папке: C:\Users\79853\Desktop\etl5
+
+【 Папка: etl5 】
+Содержимое:
+    clickhouse-init/
+    postgres-init/
+    spark-app/
+    connector-config.json
+    Dashboard.jpg
+    docker-compose.yml
+    ex.py
+    output.txt
+    p.py
+    README.md
+    requirements.txt
+
+Файл: connector-config.json 
+Содержимое:
+{
+    "name": "postgres-connector",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "database.hostname": "postgres",
+        "database.port": "5432",
+        "database.user": "user",
+        "database.password": "password",
+        "database.dbname": "mydb",
+        "database.server.name": "pgserver",
+        "topic.prefix": "pgserver",
+        "table.include.list": "public.messages",
+        "plugin.name": "pgoutput",
+        "slot.name": "debezium_slot",
+        "publication.name": "debezium_publication",
+        "snapshot.mode": "initial"
+    }
+}
+
+Файл: Dashboard.jpg 
+Содержимое: [Бинарные данные]
+
+Файл: docker-compose.yml 
+Содержимое:
+version: '3'
+networks:
+  etl-network:
+    driver: bridge
+  kafka-net:
+    external: true
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - etl-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    ports:
+      - "9093:9092"
+    networks:
+      - etl-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  postgres:
+    image: debezium/postgres:14
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    command: >
+      postgres
+      -c wal_level=logical
+      -c max_replication_slots=10
+      -c max_wal_senders=10
+    networks:
+      - etl-network
+
+  connect:
+    image: debezium/connect:2.3
+    depends_on:
+      - kafka
+      - postgres
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: connect-cluster
+      CONFIG_STORAGE_TOPIC: connect-configs
+      OFFSET_STORAGE_TOPIC: connect-offsets
+      STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+    ports:
+      - "8083:8083"
+    networks:
+      - etl-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.3
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --host localhost --query \"SELECT 1\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - etl-network
+
+  clickhouse-init:
+    image: clickhouse/clickhouse-server:23.3
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./clickhouse-init/init.sql:/init.sql:ro
+    entrypoint:
+      - bash
+      - -c
+      - |
+        until clickhouse-client --host clickhouse --query "SELECT 1"; do
+          echo "Waiting for ClickHouse..."
+          sleep 2
+        done
+        clickhouse-client --host clickhouse --multiquery < /init.sql
+    networks:
+      - etl-network
+
+  spark-master:
+    image: bitnami/spark:3.5.0
+    hostname: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+      - SPARK_LOCAL_IP=spark-master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    volumes:
+      - ./spark-app:/app
+    networks:
+      - etl-network
+    command: bash -c "pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r /app/requirements.txt && /opt/bitnami/scripts/spark/run.sh"
+
+  spark-worker:
+    image: bitnami/spark:3.5.0
+    hostname: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2g
+      - SPARK_LOCAL_IP=spark-worker
+    networks:
+      - etl-network
+
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -c "kafka-topics --create --if-not-exists
+      --topic pgserver.public.messages
+      --partitions 1
+      --replication-factor 1
+      --bootstrap-server kafka:9092"
+    networks:
+      - etl-network
+
+  connect-setup:
+    image: curlimages/curl:8.5.0
+    depends_on:
+      connect:
+        condition: service_healthy
+    volumes:
+      - ./connector-config.json:/connector-config.json
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until curl -s http://connect:8083/; do
+          echo "Waiting for Kafka Connect..."
+          sleep 2
+        done
+        curl -X POST -H "Content-Type: application/json" --data @/connector-config.json http://connect:8083/connectors
+    networks:
+      - etl-network
+
+  superset:
+    image: apache/superset:latest
+    ports:
+      - "8088:8088"
+    networks:
+      - etl-network
+    depends_on:
+      - clickhouse
+    environment:
+      SUPERSET_SECRET_KEY: your-secret-key
+      SUPERSET_LOAD_EXAMPLES: "no"
+    volumes:
+      - superset-data:/app/superset_home
+    command: >
+      bash -c "
+      pip install -i https://pypi.tuna.tsinghua.edu.cn/simple clickhouse-connect==0.6.20 &&
+      superset db upgrade &&
+      superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
+      superset init &&
+      /usr/bin/run-server.sh
+      "
+
+
+volumes:
+  postgres-data:
+  superset-data:
+
+Файл: ex.py 
+Содержимое:
+from faststream import FastStream
+from faststream.kafka import KafkaBroker
+import asyncio
+import logging
+import psycopg2
+import re
+from datetime import datetime
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("KafkaConsumer")
+
+KAFKA_BROKER = "localhost:29092"
+TOPIC = "etl-topic"
+
+PG_CONFIG = {
+    "host": "localhost",
+    "port": 5433,
+    "database": "mydb",
+    "user": "user",
+    "password": "password"
+}
+
+broker = KafkaBroker(KAFKA_BROKER)
+app = FastStream(broker)
+
+
+def parse_message(msg: str) -> tuple:
+    try:
+        # Удаляем технические части строки
+        cleaned = re.sub(r'ARRAY|NOW\(\)', '', msg)
+
+        # Извлекаем значения с помощью регулярного выражения
+        pattern = r'\((\d+),\s*\'([^\']+)\',\s*\[([^\]]+)\],\s*\[([^\]]+)\]'
+        match = re.search(pattern, cleaned)
+
+        if not match:
+            logger.error("Не удалось распарсить сообщение")
+            return None
+
+        user_id = int(match.group(1))
+        track_id = match.group(2)
+        genres = [g.strip().strip("'") for g in match.group(3).split(',')]
+        artists = [a.strip().strip("'") for a in match.group(4).split(',')]
+        timestamp = datetime.now()
+
+        return (user_id, track_id, genres, artists, timestamp)
+
+    except Exception as e:
+        logger.error(f"Ошибка парсинга: {e}")
+        return None
+
+
+def save_to_postgres(data: tuple):
+    try:
+        conn = psycopg2.connect(**PG_CONFIG)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "INSERT INTO messages (user_id, track_id, genre, artists, timestamp) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            data
+        )
+        conn.commit()
+        logger.info(f"Данные сохранены в PostgreSQL: {data}")
+    except Exception as e:
+        logger.error(f"Ошибка записи в PostgreSQL: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+
+@broker.subscriber(TOPIC)
+async def handle(msg: bytes):
+    try:
+        message = msg.decode('utf-8')
+        logger.info(f"Получено сообщение: {message}")
+
+        parsed = parse_message(message)
+        if parsed:
+            save_to_postgres(parsed)
+    except Exception as e:
+        logger.error(f"Ошибка обработки: {e}")
+
+
+async def main():
+    await broker.start()
+    logger.info("Consumer запущен. Ожидание сообщений...")
+    while True:
+        await asyncio.sleep(1)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+Файл: README.md 
+Содержимое:
+# ETL Pipeline with PostgreSQL, Debezium, Kafka, Spark и ClickHouse
+
+Реализация ETL-пайплайна для обработки данных в реальном времени с использованием:
+
+- **PostgreSQL** - источник данных
+- **Debezium** - CDC (Change Data Capture)
+- **Kafka** - потоковый брокер
+- **Spark Structured Streaming** - обработка данных
+- **ClickHouse** - аналитическая СУБД
+- **Superset** - платформа для визуализации данных
+
+## Предварительные требования
+
+- Docker 20.10+
+- Docker Compose 2.20+
+- 4 ГБ свободной оперативной памяти
+- Порты 5432, 9092, 8083, 8123, 8080 свободны
+
+## Запуск проекта
+
+1. Клонировать репозиторий:
+```bash
+git clone https://github.com/yourusername/etl5.git
+```
+2. Перейти в каталог
+```bash
+cd etl5
+```
+3. Запустить все сервисы:
+```bash
+docker-compose up -d
+```
+4. Запускаем spark
+```bash
+docker exec -it etl5-spark-master-1 spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /app/main.py
+```
+
+5. Загрузим зависимости
+```bash
+pip install -r requirements.txt
+```
+
+6. Запустим ex.py
+```bash
+python ex.py
+```
+
+## Проверка работы
+
+1. Вставить тестовые данные в PostgreSQL:
+
+```bash
+docker exec -it etl5-postgres-1 psql -U user -d mydb
+
+
+INSERT INTO messages (user_id, track_id, genre, artists, timestamp)
+VALUES 
+(1, 'track_001', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], NOW()),
+(2, 'track_002', ARRAY['rock', 'metal'], ARRAY['BandX', 'BandY'], NOW());
+```
+
+```bash
+INSERT INTO messages (user_id, track_id, genre, artists, timestamp)
+VALUES 
+(1, 'track_058', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2023-04-18 15:31:45'),
+(2, 'track_056', ARRAY['rock', 'metal'], ARRAY['BandX', 'BandY'], '2023-10-29 23:59:59'),
+(3, 'track_044', ARRAY['jazz', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2025-01-15 08:35:45'),
+(6, 'track_055', ARRAY['pop'], ARRAY['ArtistA', 'ArtistB'], '2023-11-15 08:30:45'),
+(5, 'track_049', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2021-06-10 16:30:45'),
+(9, 'track_096', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2022-10-11 12:30:45'),
+(11, 'track_098', ARRAY['electronic'], ARRAY['ArtistA', 'ArtistB'], '2024-01-15 08:30:45'),
+(13, 'track_099', ARRAY['pop', 'electronic'], ARRAY['ArtistC'], '2021-03-15 08:30:45'),
+(14, 'track_019', ARRAY['pop', 'jazz'], ARRAY['ArtistD', 'ArtistB'], '2025-04-15 09:30:45'),
+(15, 'track_008', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistD'], '2025-04-15 06:30:45'),
+(1, 'track_007', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2025-04-15 05:30:45'),
+(2, 'track_005', ARRAY['pop', 'electronic'], ARRAY['ArtistV', 'ArtistB'], '2025-05-15 15:30:45'),
+(3, 'track_0014', ARRAY['hip hop', 'electronic'], ARRAY['ArtistS', 'ArtistF'], '2021-06-15 19:30:45'),
+(16, 'track_0013', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2024-07-15 19:30:45'),
+(17, 'track_0011', ARRAY['pop', 'rap'], ARRAY['ArtistA', 'ArtistB'], '2024-08-15 20:30:45'),
+(8, 'track_0046', ARRAY['rap'], ARRAY['ArtistA', 'ArtistB'], '2024-09-15 21:30:45'),
+(7, 'track_0068', ARRAY['pop', 'electronic'], ARRAY['ArtistA', 'ArtistB'], '2024-02-15 22:30:45'),
+(1, 'track_0026', ARRAY['rap', 'electronic'], ARRAY['ArtistA', 'ArtistC'], '2025-03-15 19:30:45'),
+(3, 'track_0030', ARRAY['electronic'], ARRAY['ArtistA', 'ArtistB'], '2023-04-15 16:30:45'),
+(4, 'track_0045', ARRAY['pop', 'electronic'], ARRAY['ArtistN', 'ArtistV'], '2024-05-15 22:30:45'),
+(1, 'track_0011', ARRAY['electronic'], ARRAY['ArtistA', 'ArtistE'], '2025-11-15 21:30:45'),
+(1, 'track_004', ARRAY['rock', 'metal'], ARRAY['BandE', 'BandY'], '2025-12-25 23:59:59');
+```
+
+2. Проверить данные в ClickHouse:
+
+```bash
+docker exec -it etl5-clickhouse-1 clickhouse-client
+
+SELECT * FROM test.messages
+```
+
+Ожидаемый вывод:
+```
+┌─user_id─┬─track_id──┬─genre──────┬─artist──┬───────────timestamp─┐
+│       1 │ track_001 │ pop        │ ArtistA │ 2025-05-24 17:17:45 │
+│       1 │ track_001 │ pop        │ ArtistB │ 2025-05-24 17:17:45 │
+│       1 │ track_001 │ electronic │ ArtistA │ 2025-05-24 17:17:45 │
+│       1 │ track_001 │ electronic │ ArtistB │ 2025-05-24 17:17:45 │
+│       2 │ track_002 │ rock       │ BandX   │ 2025-05-24 17:17:45 │
+│       2 │ track_002 │ rock       │ BandY   │ 2025-05-24 17:17:45 │
+│       2 │ track_002 │ metal      │ BandX   │ 2025-05-24 17:17:45 │
+│       2 │ track_002 │ metal      │ BandY   │ 2025-05-24 17:17:45 │
+└─────────┴───────────┴────────────┴─────────┴─────────────────────┘
+
+
+```
+3. Можно перейти по http://localhost:8088
+
+4. Логинимся
+
+Вводим:
+
+```
+Login: admin
+
+Password: admin
+```
+5. Создаём подключение
+
+Вводим:
+
+```
+HOST: clickhouse
+
+PORT: 8123
+
+Database name: test
+
+USERNAME: default
+
+Password: (пусто)
+
+Display name: ClickHouse Test
+```
+
+6. Создаём dashboard
+
+*В верхнем чаре можно подвигать ползунок и поменять YAU на MAU, DAU*
+
+![Пример dashboard](./Dashboard.jpg)
+
+## Архитектура
+```
+PostgreSQL → (Debezium) → Kafka → Spark Streaming → ClickHouse -> Superset
+```
+
+
+
+
+
+Файл: requirements.txt 
+Содержимое:
+faststream[kafka]
+psycopg2-binary
+protobuf
+google-api-python-client
+googleapis-common-protos
+
+
+【 Папка: clickhouse-init 】
+Содержимое:
+    init.sql
+
+Файл: clickhouse-init\init.sql 
+Содержимое:
+CREATE DATABASE IF NOT EXISTS test;
+
+CREATE TABLE IF NOT EXISTS test.messages (
+    user_id   Int32,
+    track_id  String,
+    genre     String,
+    artist    String,
+    timestamp DateTime
+) ENGINE = MergeTree()
+ORDER BY (user_id, timestamp);
+
+
+【 Папка: postgres-init 】
+Содержимое:
+    init.sql
+
+Файл: postgres-init\init.sql 
+Содержимое:
+-- Подключаемся к системной базе 'postgres'
+\c postgres
+
+-- Удаляем базу 'mydb', если она существует
+DROP DATABASE IF EXISTS mydb;
+
+-- Создаем новую базу 'mydb'
+CREATE DATABASE mydb;
+
+-- Переключаемся на созданную базу
+\c mydb
+
+-- Создаем таблицу 'messages'
+CREATE TABLE messages (
+    user_id INT,
+    track_id VARCHAR(255),
+    genre TEXT[],
+    artists TEXT[],
+    timestamp TIMESTAMP DEFAULT NOW()
+);
+
+【 Папка: spark-app 】
+Содержимое:
+    main.py
+    requirements.txt
+
+Файл: spark-app\main.py 
+Содержимое:
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, from_json, expr, explode
+from pyspark.sql.types import *
+from clickhouse_driver import Client
+
+# Инициализация Spark
+spark = SparkSession.builder \
+    .appName("MusicDataPipeline") \
+    .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0") \
+    .config("spark.sql.streaming.checkpointLocation", "/tmp/checkpoints") \
+    .getOrCreate()
+
+# Определение схемы для Debezium
+inner_schema = StructType([
+    StructField("before", StructType([
+        StructField("user_id", IntegerType(), True),
+        StructField("track_id", StringType(), True),
+        StructField("genre", ArrayType(StringType()), True),
+        StructField("artists", ArrayType(StringType()), True),
+        StructField("timestamp", LongType(), True)
+    ]), True),
+    StructField("after", StructType([
+        StructField("user_id", IntegerType(), True),
+        StructField("track_id", StringType(), True),
+        StructField("genre", ArrayType(StringType()), True),
+        StructField("artists", ArrayType(StringType()), True),
+        StructField("timestamp", LongType(), True)
+    ]), True),
+    StructField("op", StringType(), True)
+])
+
+root_schema = StructType([
+    StructField("schema", StringType(), True),
+    StructField("payload", inner_schema)
+])
+
+# Чтение из Kafka
+raw_df = spark.readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "kafka:9092") \
+    .option("subscribe", "pgserver.public.messages") \
+    .option("startingOffsets", "earliest") \
+    .load()
+
+# Обработка данных
+parsed_df = raw_df.select(
+    from_json(col("value").cast("string"), root_schema).alias("data")
+).select(
+    col("data.payload.after.user_id").alias("user_id"),
+    col("data.payload.after.track_id").alias("track_id"),
+    col("data.payload.after.genre").alias("genre"),
+    col("data.payload.after.artists").alias("artists"),
+    expr("timestamp_micros(data.payload.after.timestamp)").alias("timestamp")
+).withColumn(
+    "genre", explode("genre")
+).withColumn(
+    "artist", explode("artists")
+).select(
+    "user_id",
+    "track_id",
+    "genre",
+    "artist",
+    "timestamp"
+).filter(
+    col("genre").isNotNull() & col("artist").isNotNull()
+)
+
+# Функция записи в ClickHouse
+def write_to_clickhouse(batch_df, batch_id):
+    client = None
+    try:
+        if batch_df.rdd.isEmpty():
+            return
+        client = Client('clickhouse', port=9000, database='test')
+        rows = batch_df.collect()
+        inserts = [{
+            "user_id": row.user_id,
+            "track_id": row.track_id,
+            "genre": row.genre,
+            "artist": row.artist, 
+            "timestamp": row.timestamp
+        } for row in rows]
+        client.execute("INSERT INTO test.messages (user_id, track_id, genre, artist, timestamp) VALUES", inserts)
+        print(f"Batch {batch_id}: Inserted {len(inserts)} rows")
+    except Exception as e:
+        print(f"Error in batch {batch_id}: {str(e)}")
+    finally:
+        if client is not None:
+            client.disconnect()
+
+# Запуск стриминга
+query = parsed_df.writeStream \
+    .foreachBatch(write_to_clickhouse) \
+    .outputMode("append") \
+    .start()
+
+query.awaitTermination()
+
+Файл: spark-app\requirements.txt 
+Содержимое:
+clickhouse-driver==0.2.6
+
+
+========================================
+Сканирование завершено успешно!

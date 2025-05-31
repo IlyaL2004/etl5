@@ -151,3 +151,52 @@ PostgreSQL → (Debezium) → Kafka → Spark Streaming → ClickHouse -> Supers
 
 
 
+7. Ещё примеры данных
+
+(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+event-type:UserRegistered;{"user_id":"user123","email":"user@example.com","username":"new_user","timestamp":"2025-05-24T17:17:45"}
+{"event_type": "SessionStarted", "session_id": "session_abc", "user_id": "user123", "track_id": "track_001", "bitrate": "320kbps", "timestamp": "2025-05-24T17:18:00"}
+
+UserRegistered:
+
+text
+Заголовок: event-type: UserRegistered
+Тело: {"user_id": "user123", "email": "user@example.com", "username": "new_user", "timestamp": "2025-05-24T17:17:45"}
+SessionStarted:
+
+text
+event-type:SessionStarted;{"session_id":"session_abc","user_id":"user123","track_id":"track_001","bitrate":"320kbps","timestamp":"2025-05-24T17:18:00"}
+BitrateChangedEvent:
+
+text
+{"event_type": "BitrateChangedEvent", "session_id": "session_abc", "new_bitrate": 256, "timestamp": "2025-05-24T17:19:30"}
+ChunksAckEvent:
+
+text
+{"type": "ChunksAckEvent", "session_id": "session_abc", "acked_chunk_count": 100, "timestamp": "2025-05-24T17:20:00"}
+SessionPaused:
+
+text
+event-type:SessionPaused;{"session_id":"session_abc","timestamp":"2025-05-24T17:21:00"}
+SessionResumed:
+
+text
+event-type:SessionResumed;{"session_id":"session_abc","timestamp":"2025-05-24T17:22:00"}
+SessionStopped:
+
+text
+{"event_type": "SessionStopped", "session_id": "session_abc", "total_chunks_sent": 500, "timestamp": "2025-05-24T17:25:00"}
+OffsetChangedEvent:
+
+text
+event-type:OffsetChangedEvent;{"session_id":"session_abc","new_chunk_offset":300,"old_chunk_offset":200,"timestamp":"2025-05-24T17:23:00"}
+TrackAddedToPlaylist:
+
+text
+{"type": "TrackAddedToPlaylist", "playlist_id": 5, "track_id": 10, "user_id": 1, "timestamp": "2025-05-24T17:24:00"}
+Старый формат:
+
+text
+(3, 'classic_track', ARRAY['classical'], ARRAY['Composer1'], '2025-05-25 11:00:00')
+
+8. Инициализировать таблицы в постгресс
