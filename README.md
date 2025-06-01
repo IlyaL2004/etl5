@@ -200,3 +200,51 @@ text
 (3, 'classic_track', ARRAY['classical'], ARRAY['Composer1'], '2025-05-25 11:00:00')
 
 8. Инициализировать таблицы в постгресс
+
+
+kafka-console-consumer --bootstrap-server localhost:9092 --topic pgserver.public.messages --from-beginning
+
+
+
+9.C:\Users\79853\Desktop\audio_service\audio_service_project>docker-compose exec kafka kafka-console-producer.sh --bootstrap-server kafka:9092 --topic etl-topic 
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>UserRegistered
+>event-type: UserRegistered
+>event-type:UserRegistered
+>event-type: UserRegistered
+>event-type:UserRegistered;{"user_id":"user123","email":"user@example.com","username":"new_user","timestamp":"2025-05-24T17:17:45"}
+>event-type:UserRegistered;{"user_id":"user123","email":"user@example.com","username":"new_user","timestamp":"2025-05-24T17:17:45"}
+>{"event_type": "SessionStarted", "session_id": "session_abc", "user_id": "user123", "track_id": "track_001", "bitrate": "320kbps", "timestamp": "2025-05-24T17:18:00"}
+>{"event_type": "SessionStarted", "session_id": "session_abc", "user_id": "user123", "track_id": "track_001", "bitrate": "320kbps", "timestamp": "2025-05-24T17:18:00"}
+>event-type:UserRegistered;{"user_id":"user123","email":"user@example.com","username":"new_user","timestamp":"2025-05-24T17:17:45"}
+>{"event_type": "SessionStarted", "session_id": "session_abc", "user_id": "user123", "track_id": "track_001", "bitrate": "320kbps", "timestamp": "2025-05-24T17:18:00"}
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>{"event_type": "SessionStarted", "session_id": "session_abc", "user_id": "user123", "track_id": "track_001", "bitrate": "320kbps", "timestamp": "2025-05-24T17:18:00"}
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>{"event_type": "SessionStarted", "session_id": "session_abc", "user_id": "user123", "track_id": "track_001", "bitrate": "320kbps", "timestamp": "2025-05-24T17:18:00"}
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>{"event_type": "SessionStarted", "session_id": "session_abc", "user_id": "user123", "track_id": "track_001", "bitrate": "320kbps", "timestamp": "2025-05-24T17:18:00"}
+>{"event_type": "SessionStarted", "session_id": "session_abc", "user_id": "user123", "track_id": "track_001", "bitrate": "320kbps", "timestamp": "2025-05-24T17:18:00"}
+>event-type:UserRegistered;{"user_id":"user123","email":"user@example.com","username":"new_user","timestamp":"2025-05-24T17:17:45"}
+>event-type:UserRegistered;{"user_id":"user123","email":"user@example.com","username":"new_user","timestamp":"2025-05-24T17:17:45"}
+>{"type": "TrackAddedToPlaylist", "playlist_id": 5, "track_id": 10, "user_id": 1, "timestamp": "2025-05-24T17:24:00"}
+>{"type": "TrackAddedToPlaylist", "playlist_id": 5, "track_id": 10, "user_id": 1, "timestamp": "2025-05-24T17:24:00"}
+>(1, 'test_track', ARRAY['pop', 'rock'], ARRAY['Artist1', 'Artist2'], NOW())
+>{"type": "TrackAddedToPlaylist", "playlist_id": 5, "track_id": 10, "user_id": 1, "timestamp": "2025-05-24T17:24:00"}
+>

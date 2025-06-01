@@ -9,7 +9,7 @@
         "database.dbname": "mydb",
         "database.server.name": "pgserver",
         "topic.prefix": "pgserver",
-        "table.include.list": "public.messages",
+        "table.include.list": "public.messages,public.user_events,public.session_events,public.playlist_events",
         "plugin.name": "pgoutput",
         "slot.name": "debezium_slot",
         "publication.name": "debezium_publication",

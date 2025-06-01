@@ -146,11 +146,12 @@ services:
       kafka:
         condition: service_healthy
     command: >
-      bash -c "kafka-topics --create --if-not-exists
-      --topic pgserver.public.messages
-      --partitions 1
-      --replication-factor 1
-      --bootstrap-server kafka:9092"
+      bash -c "
+      kafka-topics --create --if-not-exists --topic pgserver.public.messages --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092;
+      kafka-topics --create --if-not-exists --topic pgserver.public.user_events --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092;
+      kafka-topics --create --if-not-exists --topic pgserver.public.session_events --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092;
+      kafka-topics --create --if-not-exists --topic pgserver.public.playlist_events --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092
+      "
     networks:
       - etl-network
 
