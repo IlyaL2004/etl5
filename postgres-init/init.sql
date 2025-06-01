@@ -20,15 +20,6 @@ CREATE TABLE messages (
 );
 
 
--- Новые таблицы для событий
-CREATE TABLE IF NOT EXISTS user_events (
-    event_id SERIAL PRIMARY KEY,
-    event_type VARCHAR(50) NOT NULL,
-    user_id VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    username VARCHAR(255),
-    timestamp TIMESTAMP NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS session_events (
     event_id SERIAL PRIMARY KEY,
@@ -51,5 +42,13 @@ CREATE TABLE IF NOT EXISTS playlist_events (
     playlist_id INT NOT NULL,
     track_id INT NOT NULL,
     user_id INT NOT NULL,
+    timestamp TIMESTAMP NOT NULL
+);
+
+
+CREATE TABLE IF NOT EXISTS users_events (
+    event_id SERIAL PRIMARY KEY,
+    event_type VARCHAR(50) NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
     timestamp TIMESTAMP NOT NULL
 );

@@ -3,10 +3,12 @@ from faststream.kafka import KafkaBroker, KafkaMessage
 import asyncio
 import logging
 import psycopg2
+import json
+import re
 from datetime import datetime
 from google.protobuf.timestamp_pb2 import Timestamp
 
-from generated.events_pb2 import (
+from generated.events_pb2 import (  # Импорт сгенерированных классов
     SessionStarted,
     ChunksAckEvent,
     BitrateChangedEvent,
@@ -14,8 +16,8 @@ from generated.events_pb2 import (
     SessionPaused,
     SessionResumed,
     SessionStopped,
-    # TrackAddedToPlaylist,  # удалено
-    # UserRegistered,       # удалено
+    TrackAddedToPlaylist,
+    UserRegistered
 )
 
 logging.basicConfig(
@@ -73,8 +75,39 @@ async def handle(msg: KafkaMessage):
             logger.warning(f"Message without event-type: {msg}")
             return
 
-        # 1) SessionStarted
-        if event_type == "SessionStarted":
+        # 1) TrackAddedToPlaylist
+        if event_type == "TrackAddedToPlaylist":
+            event = TrackAddedToPlaylist()
+            event.ParseFromString(msg.body)
+            ts = convert_proto_timestamp(event.timestamp)
+            logger.info(
+                f"Track {event.track_id} added to playlist {event.playlist_id} "
+                f"by user {event.user_id} at {ts}"
+            )
+            save_to_postgres("playlist_events", {
+                "event_type": event_type,
+                "playlist_id": event.playlist_id,
+                "track_id": event.track_id,
+                "user_id": event.user_id,
+                "timestamp": ts
+            })
+
+        # 2) UserRegistered
+        elif event_type == "UserRegistered":
+            event = UserRegistered()
+            event.ParseFromString(msg.body)
+            ts = convert_proto_timestamp(event.timestamp)
+            logger.info(
+                f"New user registered: {event.user_id}"
+            )
+            save_to_postgres("users_events", {
+                "event_type": event_type,
+                "user_id": event.user_id,
+                "timestamp": ts
+            })
+
+        # 3) SessionStarted
+        elif event_type == "SessionStarted":
             event = SessionStarted()
             event.ParseFromString(msg.body)
             ts = convert_proto_timestamp(event.timestamp)
@@ -91,7 +124,7 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 2) ChunksAckEvent
+        # 4) ChunksAckEvent
         elif event_type == "ChunksAckEvent":
             event = ChunksAckEvent()
             event.ParseFromString(msg.body)
@@ -106,7 +139,7 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 3) BitrateChangedEvent
+        # 5) BitrateChangedEvent
         elif event_type == "BitrateChangedEvent":
             event = BitrateChangedEvent()
             event.ParseFromString(msg.body)
@@ -121,7 +154,7 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 4) OffsetChangedEvent
+        # 6) OffsetChangedEvent
         elif event_type == "OffsetChangedEvent":
             event = OffsetChangedEvent()
             event.ParseFromString(msg.body)
@@ -138,7 +171,7 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 5) SessionPaused
+        # 7) SessionPaused
         elif event_type == "SessionPaused":
             event = SessionPaused()
             event.ParseFromString(msg.body)
@@ -150,7 +183,7 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 6) SessionResumed
+        # 8) SessionResumed
         elif event_type == "SessionResumed":
             event = SessionResumed()
             event.ParseFromString(msg.body)
@@ -162,7 +195,7 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 7) SessionStopped
+        # 9) SessionStopped
         elif event_type == "SessionStopped":
             event = SessionStopped()
             event.ParseFromString(msg.body)

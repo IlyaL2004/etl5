@@ -77,3 +77,21 @@ class SessionStopped(_message.Message):
     total_chunks_sent: int
     timestamp: _timestamp_pb2.Timestamp
     def __init__(self, session_id: _Optional[str] = ..., total_chunks_sent: _Optional[int] = ..., timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class UserRegistered(_message.Message):
+    __slots__ = ("user_id",)
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    def __init__(self, user_id: _Optional[str] = ...) -> None: ...
+
+class TrackAddedToPlaylist(_message.Message):
+    __slots__ = ("playlist_id", "track_id", "user_id", "timestamp")
+    PLAYLIST_ID_FIELD_NUMBER: _ClassVar[int]
+    TRACK_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    playlist_id: int
+    track_id: int
+    user_id: int
+    timestamp: _timestamp_pb2.Timestamp
+    def __init__(self, playlist_id: _Optional[int] = ..., track_id: _Optional[int] = ..., user_id: _Optional[int] = ..., timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...

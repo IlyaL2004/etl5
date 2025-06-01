@@ -10,16 +10,6 @@ CREATE TABLE IF NOT EXISTS test.messages (
 ) ENGINE = MergeTree()
 ORDER BY (user_id, timestamp);
 
--- Таблица для user_events
-CREATE TABLE IF NOT EXISTS test.user_events (
-    event_id   Int32,
-    event_type String,
-    user_id    String,
-    email      String,
-    username   String,
-    timestamp  DateTime
-) ENGINE = MergeTree()
-ORDER BY (user_id, timestamp);
 
 -- Таблица для session_events
 CREATE TABLE IF NOT EXISTS test.session_events (
@@ -48,3 +38,13 @@ CREATE TABLE IF NOT EXISTS test.playlist_events (
     timestamp   DateTime
 ) ENGINE = MergeTree()
 ORDER BY (playlist_id, timestamp);
+
+
+-- Таблица для user_events
+CREATE TABLE IF NOT EXISTS test.users_events (
+    event_id   Int32,
+    event_type String,
+    user_id    String,
+    timestamp  DateTime
+) ENGINE = MergeTree()
+ORDER BY (user_id, timestamp);

@@ -264,10 +264,10 @@ session_query = (
 )
 
 #
-# 3) Обработка topic = pgserver.public.user_events
+# 3) Обработка topic = pgserver.public.users_events
 #
 
-# Схема Debezium для user_events
+# Схема Debezium для users_events
 user_inner_schema = StructType([
     StructField(
         "before",
@@ -275,8 +275,6 @@ user_inner_schema = StructType([
             StructField("event_id", IntegerType(), nullable=False, metadata={"default": 0}),
             StructField("event_type", StringType(), nullable=False),
             StructField("user_id", StringType(), nullable=False),
-            StructField("email", StringType(), nullable=True),
-            StructField("username", StringType(), nullable=True),
             StructField("timestamp", LongType(), nullable=False)
         ]),
         nullable=True
@@ -287,8 +285,6 @@ user_inner_schema = StructType([
             StructField("event_id", IntegerType(), nullable=False, metadata={"default": 0}),
             StructField("event_type", StringType(), nullable=False),
             StructField("user_id", StringType(), nullable=False),
-            StructField("email", StringType(), nullable=True),
-            StructField("username", StringType(), nullable=True),
             StructField("timestamp", LongType(), nullable=False)
         ]),
         nullable=True
@@ -301,17 +297,17 @@ user_root_schema = StructType([
     StructField("payload", user_inner_schema, nullable=True)
 ])
 
-# Чтение из Kafka: user_events
+# Чтение из Kafka: users_events
 user_raw_df = (
     spark.readStream
     .format("kafka")
     .option("kafka.bootstrap.servers", "kafka:9092")
-    .option("subscribe", "pgserver.public.user_events")
+    .option("subscribe", "pgserver.public.users_events")
     .option("startingOffsets", "earliest")
     .load()
 )
 
-# Парсинг JSON и извлечение полей из payload.after для user_events
+# Парсинг JSON и извлечение полей из payload.after для users_events
 user_parsed_df = (
     user_raw_df
     .select(from_json(col("value").cast("string"), user_root_schema).alias("data"))
@@ -319,14 +315,12 @@ user_parsed_df = (
         col("data.payload.after.event_id").alias("event_id"),
         col("data.payload.after.event_type").alias("event_type"),
         col("data.payload.after.user_id").alias("user_id"),
-        col("data.payload.after.email").alias("email"),
-        col("data.payload.after.username").alias("username"),
         expr("timestamp_micros(data.payload.after.timestamp)").alias("timestamp")
     )
     .filter(col("event_id").isNotNull())
 )
 
-# Функция записи в ClickHouse для user_events
+# Функция записи в ClickHouse для users_events
 def write_user_to_clickhouse(batch_df, batch_id):
     client = None
     try:
@@ -342,20 +336,16 @@ def write_user_to_clickhouse(batch_df, batch_id):
                 "event_id": row.event_id,
                 "event_type": row.event_type,
                 "user_id": row.user_id or "",
-                "email": row.email or "",
-                "username": row.username or "",
                 "timestamp": row.timestamp
             })
 
         client.execute(
             """
-            INSERT INTO test.user_events
+            INSERT INTO test.users_events
             (
                 event_id,
                 event_type,
                 user_id,
-                email,
-                username,
                 timestamp
             ) VALUES
             """,
@@ -368,12 +358,12 @@ def write_user_to_clickhouse(batch_df, batch_id):
         if client:
             client.disconnect()
 
-# Запуск стриминга: user_events
+# Запуск стриминга: users_events
 user_query = (
     user_parsed_df.writeStream
     .foreachBatch(write_user_to_clickhouse)
     .outputMode("append")
-    .option("checkpointLocation", "/tmp/checkpoints_user_events")
+    .option("checkpointLocation", "/tmp/checkpoints_users_events")
     .start()
 )
 

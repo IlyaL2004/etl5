@@ -44,3 +44,15 @@ message SessionStopped {
   int32 total_chunks_sent = 2;
   google.protobuf.Timestamp timestamp = 3;
 }
+
+message UserRegistered {
+    string user_id = 1;
+}
+
+message TrackAddedToPlaylist {
+    int32 playlist_id = 1;
+    int32 track_id = 2;
+    int32 user_id = 3;
+    google.protobuf.Timestamp timestamp = 5;
+
+}
