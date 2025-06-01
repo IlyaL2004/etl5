@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+message SessionStarted {
+  string session_id = 1;
+  string user_id = 2;
+  string track_id = 3;
+  string bitrate = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+message ChunksAckEvent {
+  string session_id = 1;
+  int32 acked_chunk_count = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message BitrateChangedEvent {
+  string session_id = 1;
+  int32 new_bitrate = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message OffsetChangedEvent {
+  string session_id = 1;
+  int32 new_chunk_offset = 2;
+  int32 old_chunk_offset = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message SessionPaused {
+  string session_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+
+message SessionResumed {
+  string session_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+
+message SessionStopped {
+  string session_id = 1;
+  int32 total_chunks_sent = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
