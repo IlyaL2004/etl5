@@ -1,17 +1,5 @@
 CREATE DATABASE IF NOT EXISTS test;
 
--- Таблица для messages
-CREATE TABLE IF NOT EXISTS test.messages (
-    user_id   Int32,
-    track_id  String,
-    genre     String,
-    artist    String,
-    timestamp DateTime
-) ENGINE = MergeTree()
-ORDER BY (user_id, timestamp);
-
-
--- Таблица для session_events
 CREATE TABLE IF NOT EXISTS test.session_events (
     event_id          Int32,
     event_type        String,
@@ -28,7 +16,6 @@ CREATE TABLE IF NOT EXISTS test.session_events (
 ) ENGINE = MergeTree()
 ORDER BY (session_id, timestamp);
 
--- Таблица для playlist_events
 CREATE TABLE IF NOT EXISTS test.playlist_events (
     event_id    Int32,
     event_type  String,
@@ -40,7 +27,6 @@ CREATE TABLE IF NOT EXISTS test.playlist_events (
 ORDER BY (playlist_id, timestamp);
 
 
--- Таблица для user_events
 CREATE TABLE IF NOT EXISTS test.users_events (
     event_id   Int32,
     event_type String,
