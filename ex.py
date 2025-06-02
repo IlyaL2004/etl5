@@ -8,7 +8,7 @@ import re
 from datetime import datetime
 from google.protobuf.timestamp_pb2 import Timestamp
 
-from generated.events_pb2 import (  # Импорт сгенерированных классов
+from generated.events_pb2 import (
     SessionStarted,
     ChunksAckEvent,
     BitrateChangedEvent,
@@ -39,7 +39,6 @@ PG_CONFIG = {
 
 
 def convert_proto_timestamp(timestamp_proto: Timestamp) -> datetime:
-    """Конвертирует protobuf Timestamp в datetime"""
     return datetime.fromtimestamp(timestamp_proto.seconds + timestamp_proto.nanos / 1e9)
 
 
@@ -75,7 +74,6 @@ async def handle(msg: KafkaMessage):
             logger.warning(f"Message without event-type: {msg}")
             return
 
-        # 1) TrackAddedToPlaylist
         if event_type == "TrackAddedToPlaylist":
             event = TrackAddedToPlaylist()
             event.ParseFromString(msg.body)
@@ -92,7 +90,6 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 2) UserRegistered
         elif event_type == "UserRegistered":
             event = UserRegistered()
             event.ParseFromString(msg.body)
@@ -106,7 +103,6 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 3) SessionStarted
         elif event_type == "SessionStarted":
             event = SessionStarted()
             event.ParseFromString(msg.body)
@@ -124,7 +120,6 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 4) ChunksAckEvent
         elif event_type == "ChunksAckEvent":
             event = ChunksAckEvent()
             event.ParseFromString(msg.body)
@@ -139,7 +134,6 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 5) BitrateChangedEvent
         elif event_type == "BitrateChangedEvent":
             event = BitrateChangedEvent()
             event.ParseFromString(msg.body)
@@ -154,7 +148,6 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 6) OffsetChangedEvent
         elif event_type == "OffsetChangedEvent":
             event = OffsetChangedEvent()
             event.ParseFromString(msg.body)
@@ -171,7 +164,6 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 7) SessionPaused
         elif event_type == "SessionPaused":
             event = SessionPaused()
             event.ParseFromString(msg.body)
@@ -183,7 +175,6 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 8) SessionResumed
         elif event_type == "SessionResumed":
             event = SessionResumed()
             event.ParseFromString(msg.body)
@@ -195,7 +186,6 @@ async def handle(msg: KafkaMessage):
                 "timestamp": ts
             })
 
-        # 9) SessionStopped
         elif event_type == "SessionStopped":
             event = SessionStopped()
             event.ParseFromString(msg.body)

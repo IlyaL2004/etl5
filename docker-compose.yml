@@ -2,8 +2,6 @@ version: '3'
 networks:
   etl-network:
     driver: bridge
-  kafka-net:
-    external: true
 
 services:
   zookeeper:
@@ -147,7 +145,6 @@ services:
         condition: service_healthy
     command: >
       bash -c "
-      kafka-topics --create --if-not-exists --topic pgserver.public.messages --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092;
       kafka-topics --create --if-not-exists --topic pgserver.public.users_events --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092;
       kafka-topics --create --if-not-exists --topic pgserver.public.session_events --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092;
       kafka-topics --create --if-not-exists --topic pgserver.public.playlist_events --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092

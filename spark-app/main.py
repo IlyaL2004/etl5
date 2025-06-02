@@ -3,7 +3,6 @@ from pyspark.sql.functions import col, from_json, expr, explode
 from pyspark.sql.types import *
 from clickhouse_driver import Client
 
-# Инициализация Spark
 spark = (
     SparkSession.builder
     .appName("MultiTopicMusicDataPipeline")
@@ -11,119 +10,8 @@ spark = (
     .getOrCreate()
 )
 
-#
-# 1) Обработка topic = pgserver.public.messages
-#    (Explode жанры и исполнителей)
-#
 
-# Схема Debezium для messages
-messages_inner_schema = StructType([
-    StructField(
-        "before",
-        StructType([
-            StructField("user_id", IntegerType(), nullable=True),
-            StructField("track_id", StringType(), nullable=True),
-            StructField("genre", ArrayType(StringType()), nullable=True),
-            StructField("artists", ArrayType(StringType()), nullable=True),
-            StructField("timestamp", LongType(), nullable=True)
-        ]),
-        nullable=True
-    ),
-    StructField(
-        "after",
-        StructType([
-            StructField("user_id", IntegerType(), nullable=True),
-            StructField("track_id", StringType(), nullable=True),
-            StructField("genre", ArrayType(StringType()), nullable=True),
-            StructField("artists", ArrayType(StringType()), nullable=True),
-            StructField("timestamp", LongType(), nullable=True)
-        ]),
-        nullable=True
-    ),
-    StructField("op", StringType(), nullable=True)
-])
 
-messages_root_schema = StructType([
-    StructField("schema", StringType(), nullable=True),
-    StructField("payload", messages_inner_schema, nullable=True)
-])
-
-# Чтение из Kafka: messages
-messages_raw_df = (
-    spark.readStream
-    .format("kafka")
-    .option("kafka.bootstrap.servers", "kafka:9092")
-    .option("subscribe", "pgserver.public.messages")
-    .option("startingOffsets", "earliest")
-    .load()
-)
-
-# Парсинг JSON и извлечение полей из payload.after для messages
-messages_parsed_df = (
-    messages_raw_df
-    .select(from_json(col("value").cast("string"), messages_root_schema).alias("data"))
-    .select(
-        col("data.payload.after.user_id").alias("user_id"),
-        col("data.payload.after.track_id").alias("track_id"),
-        col("data.payload.after.genre").alias("genre"),
-        col("data.payload.after.artists").alias("artists"),
-        expr("timestamp_micros(data.payload.after.timestamp)").alias("timestamp")
-    )
-    .withColumn("genre", explode("genre"))
-    .withColumn("artist", explode("artists"))
-    .select("user_id", "track_id", "genre", "artist", "timestamp")
-    .filter(col("genre").isNotNull() & col("artist").isNotNull() & col("user_id").isNotNull())
-)
-
-# Функция записи в ClickHouse для messages
-def write_messages_to_clickhouse(batch_df, batch_id):
-    client = None
-    try:
-        if batch_df.rdd.isEmpty():
-            return
-
-        rows = batch_df.collect()
-        client = Client('clickhouse', port=9000, database='test')
-
-        inserts = []
-        for row in rows:
-            inserts.append({
-                "user_id": row.user_id,
-                "track_id": row.track_id or "",
-                "genre": row.genre or "",
-                "artist": row.artist or "",
-                "timestamp": row.timestamp
-            })
-
-        client.execute(
-            """
-            INSERT INTO test.messages
-            (user_id, track_id, genre, artist, timestamp)
-            VALUES
-            """,
-            inserts
-        )
-        print(f"Messages batch {batch_id}: inserted {len(inserts)} rows")
-    except Exception as e:
-        print(f"Error in messages batch {batch_id}: {e}")
-    finally:
-        if client:
-            client.disconnect()
-
-# Запуск стриминга: messages
-messages_query = (
-    messages_parsed_df.writeStream
-    .foreachBatch(write_messages_to_clickhouse)
-    .outputMode("append")
-    .option("checkpointLocation", "/tmp/checkpoints_messages")
-    .start()
-)
-
-#
-# 2) Обработка topic = pgserver.public.session_events
-#
-
-# Схема Debezium для session_events
 session_inner_schema = StructType([
     StructField(
         "before",
@@ -169,7 +57,6 @@ session_root_schema = StructType([
     StructField("payload", session_inner_schema, nullable=True)
 ])
 
-# Чтение из Kafka: session_events
 session_raw_df = (
     spark.readStream
     .format("kafka")
@@ -179,7 +66,6 @@ session_raw_df = (
     .load()
 )
 
-# Парсинг JSON и извлечение полей из payload.after для session_events
 session_parsed_df = (
     session_raw_df
     .select(from_json(col("value").cast("string"), session_root_schema).alias("data"))
@@ -200,7 +86,6 @@ session_parsed_df = (
     .filter(col("event_id").isNotNull())
 )
 
-# Функция записи в ClickHouse для session_events
 def write_session_to_clickhouse(batch_df, batch_id):
     client = None
     try:
@@ -254,7 +139,6 @@ def write_session_to_clickhouse(batch_df, batch_id):
         if client:
             client.disconnect()
 
-# Запуск стриминга: session_events
 session_query = (
     session_parsed_df.writeStream
     .foreachBatch(write_session_to_clickhouse)
@@ -263,11 +147,7 @@ session_query = (
     .start()
 )
 
-#
-# 3) Обработка topic = pgserver.public.users_events
-#
 
-# Схема Debezium для users_events
 user_inner_schema = StructType([
     StructField(
         "before",
@@ -297,7 +177,6 @@ user_root_schema = StructType([
     StructField("payload", user_inner_schema, nullable=True)
 ])
 
-# Чтение из Kafka: users_events
 user_raw_df = (
     spark.readStream
     .format("kafka")
@@ -307,7 +186,6 @@ user_raw_df = (
     .load()
 )
 
-# Парсинг JSON и извлечение полей из payload.after для users_events
 user_parsed_df = (
     user_raw_df
     .select(from_json(col("value").cast("string"), user_root_schema).alias("data"))
@@ -320,7 +198,6 @@ user_parsed_df = (
     .filter(col("event_id").isNotNull())
 )
 
-# Функция записи в ClickHouse для users_events
 def write_user_to_clickhouse(batch_df, batch_id):
     client = None
     try:
@@ -358,7 +235,6 @@ def write_user_to_clickhouse(batch_df, batch_id):
         if client:
             client.disconnect()
 
-# Запуск стриминга: users_events
 user_query = (
     user_parsed_df.writeStream
     .foreachBatch(write_user_to_clickhouse)
@@ -367,11 +243,7 @@ user_query = (
     .start()
 )
 
-#
-# 4) Обработка topic = pgserver.public.playlist_events
-#
 
-# Схема Debezium для playlist_events
 playlist_inner_schema = StructType([
     StructField(
         "before",
@@ -405,7 +277,6 @@ playlist_root_schema = StructType([
     StructField("payload", playlist_inner_schema, nullable=True)
 ])
 
-# Чтение из Kafka: playlist_events
 playlist_raw_df = (
     spark.readStream
     .format("kafka")
@@ -415,7 +286,6 @@ playlist_raw_df = (
     .load()
 )
 
-# Парсинг JSON и извлечение полей из payload.after для playlist_events
 playlist_parsed_df = (
     playlist_raw_df
     .select(from_json(col("value").cast("string"), playlist_root_schema).alias("data"))
@@ -430,7 +300,6 @@ playlist_parsed_df = (
     .filter(col("event_id").isNotNull())
 )
 
-# Функция записи в ClickHouse для playlist_events
 def write_playlist_to_clickhouse(batch_df, batch_id):
     client = None
     try:
@@ -472,7 +341,6 @@ def write_playlist_to_clickhouse(batch_df, batch_id):
         if client:
             client.disconnect()
 
-# Запуск стриминга: playlist_events
 playlist_query = (
     playlist_parsed_df.writeStream
     .foreachBatch(write_playlist_to_clickhouse)
@@ -481,5 +349,4 @@ playlist_query = (
     .start()
 )
 
-# Ожидаем завершения любого стрима
 spark.streams.awaitAnyTermination()
