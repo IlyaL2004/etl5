@@ -48,7 +48,7 @@ docker exec -it etl5-postgres-1 psql -U user -d mydb
 
 INSERT INTO playlist_events (event_id, event_type, playlist_id, track_id, user_id, timestamp)
 VALUES 
-(391771, 'TrackAddedToPlaylist', 76, 9308, 741105, NOW());
+(3917871, 'TrackAddedToPlaylist', 76, 9308, 741105, NOW());
 ```
 
 
@@ -61,8 +61,10 @@ SELECT * FROM test.playlist_events
 ```
 
 
-```
-3. Можно перейти по http://localhost:8088
+
+3. Можно перейти по 
+
+*http://localhost:8088*
 
 4. Логинимся
 
@@ -77,29 +79,34 @@ Password: admin
 
 Вводим:
 
-```
-HOST: clickhouse
 
-PORT: 8123
+HOST: *clickhouse*
 
-Database name: test
+PORT: *8123*
 
-USERNAME: default
+Database name: *test*
 
-Password: (пусто)
+USERNAME: *default*
 
-Display name: ClickHouse Test
-```
+Password: *(пусто)*
+
+Display name: *ClickHouse Test*
+
 
 6. Создаём dashboard
 
-*В верхнем чаре можно подвигать ползунок и поменять YAU на MAU, DAU*
 
-![Пример dashboard](./Dashboard.jpg)
+![Пример dashboard](./музыкальный-сервис.jpg)
+
 
 ## Архитектура
 ```
 PostgreSQL → (Debezium) → Kafka → Spark Streaming → ClickHouse -> Superset
 ```
+
+
+7. В репозитории присутствуют файлы интеграции с другим проектом.
+
+
 
 
