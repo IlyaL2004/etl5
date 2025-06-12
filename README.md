@@ -8,6 +8,8 @@
 - **Spark Structured Streaming** - обработка данных
 - **ClickHouse** - аналитическая СУБД
 - **Superset** - платформа для визуализации данных
+- **DataLens** - платформа для визуализации данных
+
 
 ## Запуск проекта
 
@@ -99,14 +101,46 @@ Display name: *ClickHouse Test*
 ![Пример dashboard](./музыкальный-сервис.jpg)
 
 
+7. Подключение DataLens
+
+7.1. установим Node.js
+
+- localtunnel требует Node.js (версии 14+).
+
+- Скачайте Node.js с официального сайта (рекомендуется LTS-версия).
+
+Проверьте установку:
+
+```bash
+node --version 
+npm --version   
+```
+
+7.2. Установка localtunnel глобально
+
+```bash
+npm install -g localtunnel
+````
+
+7.3. Запуск localtunnel
+
+```bash
+lt --port 8123
+````
+В терминале будет:
+
+*your url is: https://cool-impalas-scream.loca.lt*
+
+7.4. Переёдем на сайт DataLens и создадим подключение
+
+![Пример подключения](./DataLens_connection.png)
+
+8. репозитории присутствуют файлы интеграции с другим проектом.
+
 ## Архитектура
 ```
 PostgreSQL → (Debezium) → Kafka → Spark Streaming → ClickHouse -> Superset
+                                                               \-> DataLens
+                                                                
 ```
-
-
-7. В репозитории присутствуют файлы интеграции с другим проектом.
-
-
-
 
